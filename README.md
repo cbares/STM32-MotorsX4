@@ -4,12 +4,12 @@
 * Complementary pwm (up to 3 phases) with dead zone
 * Drive by APB2 clck (84MHz default on nucleo)
 * prescaler set to 84 => timer frequency = 1 MHz
-* prescaler set to 1000 => PWM period = 1 ms
-* default pulse set to 500 => duty cycle = 50 %
+* prescaler set to 1000 (STEPS) => PWM period = 1 ms
+* default pulse set to 500 (STEPS/2) => duty cycle = 50 %
 
 
 ## serial protocol:
-uart1 (RX-PB6 + TX-PB7) + uart2 (USB) are activated
+uart1 (RX-PA10 + TX-PB6) + uart2 (USB) are activated
 
 The both uart are IRQ managed in parallel, they work exactly the same way.
 
@@ -24,7 +24,7 @@ The both uart are IRQ managed in parallel, they work exactly the same way.
 ## Output:
  Name | pin 
  --- | :---:
- UART1 RX| PB7
+ UART1 RX| PA10
  UART1 TX| PB6
  Tim1 chan1| PA8
  Tim1 chan1N| PB13
@@ -40,7 +40,6 @@ The both uart are IRQ managed in parallel, they work exactly the same way.
 ------
 
 ## TODO
-* remove all magic numbers
 * add enable signal to stop motors
 * manage rotary encoder and return speed?
 

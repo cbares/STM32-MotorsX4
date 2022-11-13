@@ -33,6 +33,7 @@
 /* USER CODE BEGIN PD */
 // #4096+4096
 #define RX_LENGTH (10-1)
+#define PATTERN "%04lu,%04lu"
 /* USER CODE END PD */
 
 /* Private macro -------------------------------------------------------------*/
@@ -48,10 +49,10 @@ UART_HandleTypeDef huart1;
 UART_HandleTypeDef huart2;
 
 /* USER CODE BEGIN PV */
-uint32_t alphaL = 500;
-uint32_t alphaR = 500;
-uint32_t dirL = 1;
-uint32_t dirR = 1;
+uint32_t alphaL = STEPS / 2;
+uint32_t alphaR = STEPS / 2;
+int32_t dirL = 1;
+int32_t dirR = 1;
 uint8_t Rx_data1[RX_LENGTH+1];
 uint8_t Rx_data2[RX_LENGTH+1];
 /* USER CODE END PV */
@@ -90,17 +91,17 @@ void update_duty_cycle(int left, int right){
 	__HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_2, left);
 	__HAL_TIM_SET_COMPARE(&htim8, TIM_CHANNEL_1, right);
 	__HAL_TIM_SET_COMPARE(&htim8, TIM_CHANNEL_2, right);
-	printf("!%04lu,%04lu\r\n", alphaL, alphaR);
+	printf("!" PATTERN "\r\n", alphaL, alphaR);
 }
 
 void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin){
 	HAL_GPIO_TogglePin(LD2_GPIO_Port, LD2_Pin);
-	alphaL  = alphaL + dirL * 100;
-	alphaR  = alphaR + dirR * 100;
+	alphaL  = alphaL + dirL * STEPS / 10;
+	alphaR  = alphaR + dirR * STEPS / 10;
 	if (alphaL <= 0) {dirL = 1; alphaL = 0;}
-	if (alphaL >= 1000) {dirL = -1; alphaL = 1000;}
+	if (alphaL >= STEPS) {dirL = -1; alphaL = STEPS;}
 	if (alphaR <= 0) {dirR = 1; alphaR = 0;}
-	if (alphaR >= 1000) {dirR = -1; alphaR = 1000;}
+	if (alphaR >= STEPS) {dirR = -1; alphaR = STEPS;}
 	update_duty_cycle(alphaL, alphaR);
 }
 
@@ -110,14 +111,14 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
 	uint8_t* buf = huart->pRxBuffPtr - rxlength;
 	buf[rxlength] = '\0';
 	if ( (buf[0]=='?')){
-		printf("=%04lu,%04lu\r\n", alphaL, alphaR);
+		printf("=" PATTERN "\r\n", alphaL, alphaR);
 	} else if (buf[0]=='#') {
 		HAL_UART_Receive_IT(huart, buf, RX_LENGTH);
 		return;
 	} else if (rxlength > 1){
-		if (sscanf((char*) buf, "%04lu+%04lu", &alphaL, &alphaR) == 2){
-			alphaL  = alphaL % 1001;
-			alphaR  = alphaR % 1001;
+		if (sscanf((char*) buf, PATTERN, &alphaL, &alphaR) == 2){
+			alphaL  = alphaL % (STEPS + 1);
+			alphaR  = alphaR % (STEPS + 1);
 			update_duty_cycle(alphaL, alphaR);
 		}
 	}
@@ -178,7 +179,7 @@ int main(void)
 		  {Error_Handler();}
 
   printf("Started\r\n");
-  printf("!%04lu,%04lu\r\n", alphaL, alphaR);
+  printf("!" PATTERN "\r\n", alphaL, alphaR);
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -264,7 +265,7 @@ static void MX_TIM1_Init(void)
   htim1.Instance = TIM1;
   htim1.Init.Prescaler = 84 - 1;
   htim1.Init.CounterMode = TIM_COUNTERMODE_UP;
-  htim1.Init.Period = 1000 - 1 ;
+  htim1.Init.Period = STEPS;
   htim1.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
   htim1.Init.RepetitionCounter = 0;
   htim1.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_ENABLE;
@@ -279,7 +280,7 @@ static void MX_TIM1_Init(void)
     Error_Handler();
   }
   sConfigOC.OCMode = TIM_OCMODE_PWM1;
-  sConfigOC.Pulse = 500;
+  sConfigOC.Pulse = STEPS / 2;
   sConfigOC.OCPolarity = TIM_OCPOLARITY_HIGH;
   sConfigOC.OCNPolarity = TIM_OCNPOLARITY_HIGH;
   sConfigOC.OCFastMode = TIM_OCFAST_DISABLE;
@@ -333,7 +334,7 @@ static void MX_TIM8_Init(void)
   htim8.Instance = TIM8;
   htim8.Init.Prescaler = 84 - 1;
   htim8.Init.CounterMode = TIM_COUNTERMODE_UP;
-  htim8.Init.Period = 1000 - 1;
+  htim8.Init.Period = STEPS;
   htim8.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
   htim8.Init.RepetitionCounter = 0;
   htim8.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_ENABLE;
@@ -348,7 +349,7 @@ static void MX_TIM8_Init(void)
     Error_Handler();
   }
   sConfigOC.OCMode = TIM_OCMODE_PWM1;
-  sConfigOC.Pulse = 500;
+  sConfigOC.Pulse = STEPS / 2;
   sConfigOC.OCPolarity = TIM_OCPOLARITY_HIGH;
   sConfigOC.OCNPolarity = TIM_OCNPOLARITY_HIGH;
   sConfigOC.OCFastMode = TIM_OCFAST_DISABLE;
@@ -498,8 +499,6 @@ void Error_Handler(void)
   __disable_irq();
   while (1)
   {
-	  HAL_GPIO_TogglePin(LD2_GPIO_Port, LD2_Pin);
-	  HAL_Delay(100);
   }
   /* USER CODE END Error_Handler_Debug */
 }
