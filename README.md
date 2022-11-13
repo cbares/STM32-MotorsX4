@@ -22,16 +22,20 @@ The both uart are IRQ managed in parallel, they work exactly the same way.
 **Black Button**: reset set CPU and set duty cycles to 50% + uart answer: `!0500,0500\r\n`
 
 ## Output:
-* UART1 RX: PB7
-* UART1 TX: PB6
-* Tim1 chan1: PA8
-* Tim1 chan1N: PB13
-* Tim1 chan2: PA9
-* Tim1 chan2N: PB14
-* Tim8 chan1: PC6
-* Tim8 chan1N: PA7
-* Tim8 chan2: PC7
-* Tim8 chan2N: PB0
+ Name | pin 
+ --- | :---:
+ UART1 RX| PB7
+ UART1 TX| PB6
+ Tim1 chan1| PA8
+ Tim1 chan1N| PB13
+ Tim1 chan2| PA9
+ Tim1 chan2N| PB14
+ Tim8 chan1| PC6
+ Tim8 chan1N| PA7
+ Tim8 chan2| PC7
+ Tim8 chan2N| PB0
+
+![STM32 pinout](doc/pinout.png)
 
 ------
 
