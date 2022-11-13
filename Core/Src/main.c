@@ -33,6 +33,7 @@
 /* USER CODE BEGIN PD */
 // #4096+4096
 #define RX_LENGTH (10-1)
+#define PATTERN "%04lu,%04lu"
 /* USER CODE END PD */
 
 /* Private macro -------------------------------------------------------------*/
@@ -42,16 +43,15 @@
 
 /* Private variables ---------------------------------------------------------*/
 TIM_HandleTypeDef htim1;
-TIM_HandleTypeDef htim8;
 
 UART_HandleTypeDef huart1;
 UART_HandleTypeDef huart2;
 
 /* USER CODE BEGIN PV */
-uint32_t alphaL = 500;
-uint32_t alphaR = 500;
-uint32_t dirL = 1;
-uint32_t dirR = 1;
+uint32_t alphaL = STEPS / 2;
+uint32_t alphaR = STEPS / 2;
+int32_t dirL = 1;
+int32_t dirR = 1;
 uint8_t Rx_data1[RX_LENGTH+1];
 uint8_t Rx_data2[RX_LENGTH+1];
 /* USER CODE END PV */
@@ -61,7 +61,6 @@ void SystemClock_Config(void);
 static void MX_GPIO_Init(void);
 static void MX_USART2_UART_Init(void);
 static void MX_TIM1_Init(void);
-static void MX_TIM8_Init(void);
 static void MX_USART1_UART_Init(void);
 /* USER CODE BEGIN PFP */
 
@@ -83,24 +82,22 @@ int __io_putchar(int ch)
 
 void update_duty_cycle(int left, int right){
 	if( (__HAL_TIM_GET_COMPARE(&htim1, TIM_CHANNEL_1) == left) &&
-	    (__HAL_TIM_GET_COMPARE(&htim8, TIM_CHANNEL_1) == right)){
+	    (__HAL_TIM_GET_COMPARE(&htim1, TIM_CHANNEL_2) == right)){
 		return;
 	}
 	__HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_1, left);
-	__HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_2, left);
-	__HAL_TIM_SET_COMPARE(&htim8, TIM_CHANNEL_1, right);
-	__HAL_TIM_SET_COMPARE(&htim8, TIM_CHANNEL_2, right);
-	printf("!%04lu,%04lu\r\n", alphaL, alphaR);
+	__HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_2, right);
+	printf("!" PATTERN "\r\n", alphaL, alphaR);
 }
 
 void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin){
 	HAL_GPIO_TogglePin(LD2_GPIO_Port, LD2_Pin);
-	alphaL  = alphaL + dirL * 100;
-	alphaR  = alphaR + dirR * 100;
+	alphaL  = alphaL + dirL * STEPS / 10;
+	alphaR  = alphaR + dirR * STEPS / 10;
 	if (alphaL <= 0) {dirL = 1; alphaL = 0;}
-	if (alphaL >= 1000) {dirL = -1; alphaL = 1000;}
+	if (alphaL >= STEPS) {dirL = -1; alphaL = STEPS;}
 	if (alphaR <= 0) {dirR = 1; alphaR = 0;}
-	if (alphaR >= 1000) {dirR = -1; alphaR = 1000;}
+	if (alphaR >= STEPS) {dirR = -1; alphaR = STEPS;}
 	update_duty_cycle(alphaL, alphaR);
 }
 
@@ -110,14 +107,14 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
 	uint8_t* buf = huart->pRxBuffPtr - rxlength;
 	buf[rxlength] = '\0';
 	if ( (buf[0]=='?')){
-		printf("=%04lu,%04lu\r\n", alphaL, alphaR);
+		printf("=" PATTERN "\r\n", alphaL, alphaR);
 	} else if (buf[0]=='#') {
 		HAL_UART_Receive_IT(huart, buf, RX_LENGTH);
 		return;
 	} else if (rxlength > 1){
-		if (sscanf((char*) buf, "%04lu+%04lu", &alphaL, &alphaR) == 2){
-			alphaL  = alphaL % 1001;
-			alphaR  = alphaR % 1001;
+		if (sscanf((char*) buf, PATTERN, &alphaL, &alphaR) == 2){
+			alphaL  = alphaL % (STEPS + 1);
+			alphaR  = alphaR % (STEPS + 1);
 			update_duty_cycle(alphaL, alphaR);
 		}
 	}
@@ -156,29 +153,16 @@ int main(void)
   MX_GPIO_Init();
   MX_USART2_UART_Init();
   MX_TIM1_Init();
-  MX_TIM8_Init();
   MX_USART1_UART_Init();
   /* USER CODE BEGIN 2 */
 
-  if (HAL_TIM_PWM_Start(&htim1, TIM_CHANNEL_1) != HAL_OK)
-  	  	  {Error_Handler();}
-  if (HAL_TIM_PWM_Start(&htim1, TIM_CHANNEL_2) != HAL_OK)
-		  {Error_Handler();}
-  if (HAL_TIM_PWM_Start(&htim8, TIM_CHANNEL_1) != HAL_OK)
-		  {Error_Handler();}
-  if (HAL_TIM_PWM_Start(&htim8, TIM_CHANNEL_2) != HAL_OK)
-		  {Error_Handler();}
-  if (HAL_TIMEx_PWMN_Start(&htim1, TIM_CHANNEL_1) != HAL_OK)
-		  {Error_Handler();}
-  if (HAL_TIMEx_PWMN_Start(&htim1, TIM_CHANNEL_2) != HAL_OK)
-		  {Error_Handler();}
-  if (HAL_TIMEx_PWMN_Start(&htim8, TIM_CHANNEL_1) != HAL_OK)
-		  {Error_Handler();}
-  if (HAL_TIMEx_PWMN_Start(&htim8, TIM_CHANNEL_2) != HAL_OK)
-		  {Error_Handler();}
+  HAL_TIM_PWM_Start(&htim1, TIM_CHANNEL_1);
+  HAL_TIM_PWM_Start(&htim1, TIM_CHANNEL_2);
+  HAL_TIMEx_PWMN_Start(&htim1, TIM_CHANNEL_1);
+  HAL_TIMEx_PWMN_Start(&htim1, TIM_CHANNEL_2);
 
   printf("Started\r\n");
-  printf("!%04lu,%04lu\r\n", alphaL, alphaR);
+  printf("!" PATTERN "\r\n", alphaL, alphaR);
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -207,7 +191,7 @@ void SystemClock_Config(void)
   /** Configure the main internal regulator output voltage
   */
   __HAL_RCC_PWR_CLK_ENABLE();
-  __HAL_PWR_VOLTAGESCALING_CONFIG(PWR_REGULATOR_VOLTAGE_SCALE3);
+  __HAL_PWR_VOLTAGESCALING_CONFIG(PWR_REGULATOR_VOLTAGE_SCALE1);
 
   /** Initializes the RCC Oscillators according to the specified parameters
   * in the RCC_OscInitTypeDef structure.
@@ -220,7 +204,7 @@ void SystemClock_Config(void)
   RCC_OscInitStruct.PLL.PLLM = 16;
   RCC_OscInitStruct.PLL.PLLN = 336;
   RCC_OscInitStruct.PLL.PLLP = RCC_PLLP_DIV4;
-  RCC_OscInitStruct.PLL.PLLQ = 2;
+  RCC_OscInitStruct.PLL.PLLQ = 4;
   RCC_OscInitStruct.PLL.PLLR = 2;
   if (HAL_RCC_OscConfig(&RCC_OscInitStruct) != HAL_OK)
   {
@@ -264,7 +248,7 @@ static void MX_TIM1_Init(void)
   htim1.Instance = TIM1;
   htim1.Init.Prescaler = 84 - 1;
   htim1.Init.CounterMode = TIM_COUNTERMODE_UP;
-  htim1.Init.Period = 1000 - 1 ;
+  htim1.Init.Period = STEPS;
   htim1.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
   htim1.Init.RepetitionCounter = 0;
   htim1.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_ENABLE;
@@ -279,7 +263,7 @@ static void MX_TIM1_Init(void)
     Error_Handler();
   }
   sConfigOC.OCMode = TIM_OCMODE_PWM1;
-  sConfigOC.Pulse = 500;
+  sConfigOC.Pulse = STEPS / 2;
   sConfigOC.OCPolarity = TIM_OCPOLARITY_HIGH;
   sConfigOC.OCNPolarity = TIM_OCNPOLARITY_HIGH;
   sConfigOC.OCFastMode = TIM_OCFAST_DISABLE;
@@ -308,75 +292,6 @@ static void MX_TIM1_Init(void)
 
   /* USER CODE END TIM1_Init 2 */
   HAL_TIM_MspPostInit(&htim1);
-
-}
-
-/**
-  * @brief TIM8 Initialization Function
-  * @param None
-  * @retval None
-  */
-static void MX_TIM8_Init(void)
-{
-
-  /* USER CODE BEGIN TIM8_Init 0 */
-
-  /* USER CODE END TIM8_Init 0 */
-
-  TIM_MasterConfigTypeDef sMasterConfig = {0};
-  TIM_OC_InitTypeDef sConfigOC = {0};
-  TIM_BreakDeadTimeConfigTypeDef sBreakDeadTimeConfig = {0};
-
-  /* USER CODE BEGIN TIM8_Init 1 */
-
-  /* USER CODE END TIM8_Init 1 */
-  htim8.Instance = TIM8;
-  htim8.Init.Prescaler = 84 - 1;
-  htim8.Init.CounterMode = TIM_COUNTERMODE_UP;
-  htim8.Init.Period = 1000 - 1;
-  htim8.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
-  htim8.Init.RepetitionCounter = 0;
-  htim8.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_ENABLE;
-  if (HAL_TIM_PWM_Init(&htim8) != HAL_OK)
-  {
-    Error_Handler();
-  }
-  sMasterConfig.MasterOutputTrigger = TIM_TRGO_RESET;
-  sMasterConfig.MasterSlaveMode = TIM_MASTERSLAVEMODE_DISABLE;
-  if (HAL_TIMEx_MasterConfigSynchronization(&htim8, &sMasterConfig) != HAL_OK)
-  {
-    Error_Handler();
-  }
-  sConfigOC.OCMode = TIM_OCMODE_PWM1;
-  sConfigOC.Pulse = 500;
-  sConfigOC.OCPolarity = TIM_OCPOLARITY_HIGH;
-  sConfigOC.OCNPolarity = TIM_OCNPOLARITY_HIGH;
-  sConfigOC.OCFastMode = TIM_OCFAST_DISABLE;
-  sConfigOC.OCIdleState = TIM_OCIDLESTATE_RESET;
-  sConfigOC.OCNIdleState = TIM_OCNIDLESTATE_RESET;
-  if (HAL_TIM_PWM_ConfigChannel(&htim8, &sConfigOC, TIM_CHANNEL_1) != HAL_OK)
-  {
-    Error_Handler();
-  }
-  if (HAL_TIM_PWM_ConfigChannel(&htim8, &sConfigOC, TIM_CHANNEL_2) != HAL_OK)
-  {
-    Error_Handler();
-  }
-  sBreakDeadTimeConfig.OffStateRunMode = TIM_OSSR_DISABLE;
-  sBreakDeadTimeConfig.OffStateIDLEMode = TIM_OSSI_DISABLE;
-  sBreakDeadTimeConfig.LockLevel = TIM_LOCKLEVEL_OFF;
-  sBreakDeadTimeConfig.DeadTime = 232;
-  sBreakDeadTimeConfig.BreakState = TIM_BREAK_DISABLE;
-  sBreakDeadTimeConfig.BreakPolarity = TIM_BREAKPOLARITY_HIGH;
-  sBreakDeadTimeConfig.AutomaticOutput = TIM_AUTOMATICOUTPUT_DISABLE;
-  if (HAL_TIMEx_ConfigBreakDeadTime(&htim8, &sBreakDeadTimeConfig) != HAL_OK)
-  {
-    Error_Handler();
-  }
-  /* USER CODE BEGIN TIM8_Init 2 */
-
-  /* USER CODE END TIM8_Init 2 */
-  HAL_TIM_MspPostInit(&htim8);
 
 }
 
@@ -498,8 +413,6 @@ void Error_Handler(void)
   __disable_irq();
   while (1)
   {
-	  HAL_GPIO_TogglePin(LD2_GPIO_Port, LD2_Pin);
-	  HAL_Delay(100);
   }
   /* USER CODE END Error_Handler_Debug */
 }

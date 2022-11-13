@@ -1,6 +1,6 @@
-# STM32F446RE
+# STM32F410RB
 
-## tim1 and tim8 
+## tim1 
 * Complementary pwm (up to 3 phases) with dead zone
 * Drive by APB2 clck (84MHz default on nucleo)
 * prescaler set to 84 => timer frequency = 1 MHz
@@ -9,7 +9,7 @@
 
 
 ## serial protocol:
-uart1 (RX-PB6 + TX-PB7) + uart2 (USB) are activated
+uart1 (TX-PB6 + RX-PA10) + uart2 (USB) are activated
 
 The both uart are IRQ managed in parallel, they work exactly the same way.
 
@@ -24,23 +24,18 @@ The both uart are IRQ managed in parallel, they work exactly the same way.
 ## Output:
  Name | pin 
  --- | :---:
- UART1 RX| PB7
+ UART1 RX| PA10
  UART1 TX| PB6
  Tim1 chan1| PA8
  Tim1 chan1N| PB13
  Tim1 chan2| PA9
  Tim1 chan2N| PB14
- Tim8 chan1| PC6
- Tim8 chan1N| PA7
- Tim8 chan2| PC7
- Tim8 chan2N| PB0
 
 ![STM32 pinout](doc/pinout.png)
 
 ------
 
 ## TODO
-* remove all magic numbers
 * add enable signal to stop motors
 * manage rotary encoder and return speed?
 
