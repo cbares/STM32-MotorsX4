@@ -85,6 +85,22 @@ void update_duty_cycle(int left, int right){
 	    (__HAL_TIM_GET_COMPARE(&htim1, TIM_CHANNEL_2) == right)){
 		return;
 	}
+
+	if(left == STEPS/2){
+		HAL_TIMEx_PWMN_Stop(&htim1, TIM_CHANNEL_1);
+		HAL_TIM_PWM_Stop(&htim1, TIM_CHANNEL_1);
+	} else {
+		HAL_TIM_PWM_Start(&htim1, TIM_CHANNEL_1);
+		HAL_TIMEx_PWMN_Start(&htim1, TIM_CHANNEL_1);
+	}
+	if(right == STEPS/2){
+			HAL_TIMEx_PWMN_Stop(&htim1, TIM_CHANNEL_2);
+			HAL_TIM_PWM_Stop(&htim1, TIM_CHANNEL_2);
+		} else {
+			HAL_TIM_PWM_Start(&htim1, TIM_CHANNEL_2);
+			HAL_TIMEx_PWMN_Stop(&htim1, TIM_CHANNEL_2);
+	}
+
 	__HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_1, left);
 	__HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_2, right);
 	printf("!" PATTERN "\r\n", alphaL, alphaR);
@@ -156,10 +172,10 @@ int main(void)
   MX_USART1_UART_Init();
   /* USER CODE BEGIN 2 */
 
-  HAL_TIM_PWM_Start(&htim1, TIM_CHANNEL_1);
-  HAL_TIM_PWM_Start(&htim1, TIM_CHANNEL_2);
-  HAL_TIMEx_PWMN_Start(&htim1, TIM_CHANNEL_1);
-  HAL_TIMEx_PWMN_Start(&htim1, TIM_CHANNEL_2);
+//  HAL_TIM_PWM_Start(&htim1, TIM_CHANNEL_1);
+//  HAL_TIM_PWM_Start(&htim1, TIM_CHANNEL_2);
+//  HAL_TIMEx_PWMN_Start(&htim1, TIM_CHANNEL_1);
+//  HAL_TIMEx_PWMN_Start(&htim1, TIM_CHANNEL_2);
 
   printf("Started\r\n");
   printf("!" PATTERN "\r\n", alphaL, alphaR);
