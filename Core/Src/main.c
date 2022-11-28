@@ -22,6 +22,7 @@
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
 #include "stdio.h"
+#include "stdlib.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -34,6 +35,7 @@
 // #4096+4096
 #define RX_LENGTH (10-1)
 #define PATTERN "%04lu,%04lu"
+#define DELTA 80
 /* USER CODE END PD */
 
 /* Private macro -------------------------------------------------------------*/
@@ -80,25 +82,29 @@ int __io_putchar(int ch)
 	return ch;
 }
 
+int in_dead_zone(int val, int origin, int delta){
+	return abs(val - origin) < delta;
+}
+
 void update_duty_cycle(int left, int right){
 	if( (__HAL_TIM_GET_COMPARE(&htim1, TIM_CHANNEL_1) == left) &&
 	    (__HAL_TIM_GET_COMPARE(&htim1, TIM_CHANNEL_2) == right)){
 		return;
 	}
 
-	if(left == STEPS/2){
+	if(in_dead_zone(left, STEPS/2, DELTA)){
 		HAL_TIMEx_PWMN_Stop(&htim1, TIM_CHANNEL_1);
 		HAL_TIM_PWM_Stop(&htim1, TIM_CHANNEL_1);
 	} else {
 		HAL_TIM_PWM_Start(&htim1, TIM_CHANNEL_1);
 		HAL_TIMEx_PWMN_Start(&htim1, TIM_CHANNEL_1);
 	}
-	if(right == STEPS/2){
+	if(in_dead_zone(right, STEPS/2, DELTA)){
 			HAL_TIMEx_PWMN_Stop(&htim1, TIM_CHANNEL_2);
 			HAL_TIM_PWM_Stop(&htim1, TIM_CHANNEL_2);
 		} else {
 			HAL_TIM_PWM_Start(&htim1, TIM_CHANNEL_2);
-			HAL_TIMEx_PWMN_Stop(&htim1, TIM_CHANNEL_2);
+			HAL_TIMEx_PWMN_Start(&htim1, TIM_CHANNEL_2);
 	}
 
 	__HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_1, left);
