@@ -1,8 +1,8 @@
 # STM32F410RB
 
 ## tim1 
-* Complementary pwm (up to 3 phases) with dead zone
-* Drive by APB2 clck (84MHz default on nucleo)
+* Complementary pwm (up to 4 phases) with dead zone
+* Drive by APB2 clock (84MHz default on nucleo)
 * prescaler set to 84 => timer frequency = 1 MHz
 * prescaler set to 1000 => PWM period = 1 ms
 * default pulse set to 500 => duty cycle = 50 %
@@ -26,17 +26,20 @@ The both uart are IRQ managed in parallel, they work exactly the same way.
  --- | :---:
  UART1 RX| PA10
  UART1 TX| PB6
- Tim1 chan1| PA8
- Tim1 chan1N| PB13
+ Tim1 chan1N| PA7
  Tim1 chan2| PA9
- Tim1 chan2N| PB14
+ Tim1 chan3N| PB1
+ Tim1 chan4| PB11
 
-![STM32 pinout](doc/pinout.png)
+![STM32 pinout](doc/pinout-nucleo32-F410.png)
 
 ------
 
 ## TODO
-* add enable signal to stop motors
+* add enable signal to stop motors (BREAK / URGENCY Button)
 * manage rotary encoder and return speed?
+* manage jerk (perhaps with ROS2)
+* Add IMU
+* Mesure full speed
 
 
