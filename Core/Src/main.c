@@ -34,6 +34,7 @@
 // #4096+4096
 #define RX_LENGTH (10-1)
 #define PATTERN "%04lu,%04lu"
+#define ZERO STEPS/2
 /* USER CODE END PD */
 
 /* Private macro -------------------------------------------------------------*/
@@ -48,8 +49,8 @@ UART_HandleTypeDef huart1;
 UART_HandleTypeDef huart2;
 
 /* USER CODE BEGIN PV */
-uint32_t alphaL = STEPS / 2;
-uint32_t alphaR = STEPS / 2;
+uint32_t alphaL = ZERO;
+uint32_t alphaR = ZERO;
 int32_t dirL = 1;
 int32_t dirR = 1;
 uint8_t Rx_data1[RX_LENGTH+1];
@@ -80,14 +81,24 @@ int __io_putchar(int ch)
 	return ch;
 }
 
-void update_duty_cycle(int left, int right){
-	if( (__HAL_TIM_GET_COMPARE(&htim1, TIM_CHANNEL_1) == left) &&
-	    (__HAL_TIM_GET_COMPARE(&htim1, TIM_CHANNEL_2) == right)){
-		return;
+void set_timers(uint16_t val, uint32_t tim1, uint32_t tim2){
+	uint16_t val1, val2;
+
+	if(val < ZERO){
+		val1 = 0;
+		val2 = 2 * (ZERO - val);
+	} else {
+		val1 = 2 * (val - ZERO);
+		val2 = 0;
 	}
-	__HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_1, left);
-	__HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_2, right);
-	printf("!" PATTERN "\r\n", alphaL, alphaR);
+	__HAL_TIM_SET_COMPARE(&htim1, tim1, val1);
+	__HAL_TIM_SET_COMPARE(&htim1, tim2, val2);
+
+}
+
+void update_duty_cycle(int left, int right){
+	set_timers(left, TIM_CHANNEL_1, TIM_CHANNEL_2);
+	set_timers(right, TIM_CHANNEL_3, TIM_CHANNEL_4);
 }
 
 void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin){
@@ -99,6 +110,7 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin){
 	if (alphaR <= 0) {dirR = 1; alphaR = 0;}
 	if (alphaR >= STEPS) {dirR = -1; alphaR = STEPS;}
 	update_duty_cycle(alphaL, alphaR);
+	printf("!" PATTERN "\r\n", alphaL, alphaR);
 }
 
 void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
@@ -116,6 +128,7 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
 			alphaL  = alphaL % (STEPS + 1);
 			alphaR  = alphaR % (STEPS + 1);
 			update_duty_cycle(alphaL, alphaR);
+			printf("!" PATTERN "\r\n", alphaL, alphaR);
 		}
 	}
 	HAL_UART_Receive_IT(huart, buf, 1);
@@ -156,10 +169,11 @@ int main(void)
   MX_USART1_UART_Init();
   /* USER CODE BEGIN 2 */
 
-  HAL_TIM_PWM_Start(&htim1, TIM_CHANNEL_1);
+
   HAL_TIM_PWM_Start(&htim1, TIM_CHANNEL_2);
+  HAL_TIM_PWM_Start(&htim1, TIM_CHANNEL_4);
   HAL_TIMEx_PWMN_Start(&htim1, TIM_CHANNEL_1);
-  HAL_TIMEx_PWMN_Start(&htim1, TIM_CHANNEL_2);
+  HAL_TIMEx_PWMN_Start(&htim1, TIM_CHANNEL_3);
 
   printf("Started\r\n");
   printf("!" PATTERN "\r\n", alphaL, alphaR);
@@ -263,7 +277,7 @@ static void MX_TIM1_Init(void)
     Error_Handler();
   }
   sConfigOC.OCMode = TIM_OCMODE_PWM1;
-  sConfigOC.Pulse = STEPS / 2;
+  sConfigOC.Pulse = 0;
   sConfigOC.OCPolarity = TIM_OCPOLARITY_HIGH;
   sConfigOC.OCNPolarity = TIM_OCNPOLARITY_HIGH;
   sConfigOC.OCFastMode = TIM_OCFAST_DISABLE;
@@ -273,14 +287,25 @@ static void MX_TIM1_Init(void)
   {
     Error_Handler();
   }
+  sConfigOC.OCIdleState = TIM_OCIDLESTATE_SET;
   if (HAL_TIM_PWM_ConfigChannel(&htim1, &sConfigOC, TIM_CHANNEL_2) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  sConfigOC.OCIdleState = TIM_OCIDLESTATE_RESET;
+  if (HAL_TIM_PWM_ConfigChannel(&htim1, &sConfigOC, TIM_CHANNEL_3) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  sConfigOC.OCIdleState = TIM_OCIDLESTATE_SET;
+  if (HAL_TIM_PWM_ConfigChannel(&htim1, &sConfigOC, TIM_CHANNEL_4) != HAL_OK)
   {
     Error_Handler();
   }
   sBreakDeadTimeConfig.OffStateRunMode = TIM_OSSR_DISABLE;
   sBreakDeadTimeConfig.OffStateIDLEMode = TIM_OSSI_DISABLE;
   sBreakDeadTimeConfig.LockLevel = TIM_LOCKLEVEL_OFF;
-  sBreakDeadTimeConfig.DeadTime = 232;
+  sBreakDeadTimeConfig.DeadTime = 0;
   sBreakDeadTimeConfig.BreakState = TIM_BREAK_DISABLE;
   sBreakDeadTimeConfig.BreakPolarity = TIM_BREAKPOLARITY_HIGH;
   sBreakDeadTimeConfig.AutomaticOutput = TIM_AUTOMATICOUTPUT_DISABLE;
@@ -369,6 +394,8 @@ static void MX_USART2_UART_Init(void)
 static void MX_GPIO_Init(void)
 {
   GPIO_InitTypeDef GPIO_InitStruct = {0};
+/* USER CODE BEGIN MX_GPIO_Init_1 */
+/* USER CODE END MX_GPIO_Init_1 */
 
   /* GPIO Ports Clock Enable */
   __HAL_RCC_GPIOC_CLK_ENABLE();
@@ -396,6 +423,8 @@ static void MX_GPIO_Init(void)
   HAL_NVIC_SetPriority(EXTI15_10_IRQn, 0, 0);
   HAL_NVIC_EnableIRQ(EXTI15_10_IRQn);
 
+/* USER CODE BEGIN MX_GPIO_Init_2 */
+/* USER CODE END MX_GPIO_Init_2 */
 }
 
 /* USER CODE BEGIN 4 */
