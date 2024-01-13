@@ -14,3 +14,4 @@ Drivers/
 *.launch
 *.ld
 *.ld
+*Debug.cfg
