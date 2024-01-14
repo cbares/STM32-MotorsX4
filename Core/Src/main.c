@@ -6,7 +6,7 @@
   ******************************************************************************
   * @attention
   *
-  * Copyright (c) 2023 STMicroelectronics.
+  * Copyright (c) 2022 STMicroelectronics.
   * All rights reserved.
   *
   * This software is licensed under terms that can be found in the LICENSE file
@@ -21,7 +21,7 @@
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
-
+#include "stdio.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -31,7 +31,10 @@
 
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
-
+#define RX_LENGTH (10-1)
+#define PATTERN "%04lu,%04lu"
+#define ZERO STEPS/2
+#define DELTA_STEP 10
 /* USER CODE END PD */
 
 /* Private macro -------------------------------------------------------------*/
@@ -48,7 +51,12 @@ UART_HandleTypeDef huart1;
 UART_HandleTypeDef huart2;
 
 /* USER CODE BEGIN PV */
-
+uint32_t alphaL = ZERO;
+uint32_t alphaR = ZERO;
+int32_t dirL = 1;
+int32_t dirR = 1;
+uint8_t Rx_data1[RX_LENGTH+1];
+uint8_t Rx_data2[RX_LENGTH+1];
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -65,6 +73,71 @@ static void MX_USART1_UART_Init(void);
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
+/**
+  * @brief  Retargets the C library printf function to the USART.
+  * @param  None
+  * @retval None
+  */
+int __io_putchar(int ch)
+{
+	HAL_UART_Transmit(&huart1, (uint8_t *)&ch, 1, HAL_MAX_DELAY);
+	HAL_UART_Transmit(&huart2, (uint8_t *)&ch, 1, HAL_MAX_DELAY);
+	return(ch);
+}
+
+void set_timers(uint16_t val, uint32_t tim1, uint32_t tim2){
+	uint16_t val1;
+	uint16_t val2;
+
+	if(val < ZERO){
+		val1 = 0;
+		val2 = 2 * (ZERO - val);
+	} else {
+		val1 = 2 * (val - ZERO);
+		val2 = 0;
+	}
+	__HAL_TIM_SET_COMPARE(&htim1, tim1, val1);
+	__HAL_TIM_SET_COMPARE(&htim1, tim2, val2);
+
+}
+
+void update_duty_cycle(int left, int right){
+	set_timers(left, TIM_CHANNEL_1, TIM_CHANNEL_2);
+	set_timers(right, TIM_CHANNEL_3, TIM_CHANNEL_4);
+}
+
+void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin){
+	HAL_GPIO_TogglePin(LD2_GPIO_Port, LD2_Pin);
+	alphaL  = alphaL + dirL * STEPS / DELTA_STEP;
+	alphaR  = alphaR + dirR * STEPS / DELTA_STEP;
+	if (alphaL <= 0) {dirL = 1; alphaL = 0;}
+	if (alphaL >= STEPS) {dirL = -1; alphaL = STEPS;}
+	if (alphaR <= 0) {dirR = 1; alphaR = 0;}
+	if (alphaR >= STEPS) {dirR = -1; alphaR = STEPS;}
+	update_duty_cycle(alphaL, alphaR);
+	printf("!" PATTERN "\r\n", alphaL, alphaR);
+}
+
+void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
+{
+	uint16_t rxlength = huart->RxXferSize;
+	uint8_t* buf = huart->pRxBuffPtr - rxlength;
+	buf[rxlength] = '\0';
+	if ( (buf[0]=='?')){
+		printf("=" PATTERN "\r\n", alphaL, alphaR);
+	} else if (buf[0]=='#') {
+		HAL_UART_Receive_IT(huart, buf, RX_LENGTH);
+		return;
+	} else if (rxlength > 1){
+		if (sscanf((char*) buf, PATTERN, &alphaL, &alphaR) == 2){
+			alphaL  = alphaL % (STEPS + 1);
+			alphaR  = alphaR % (STEPS + 1);
+			update_duty_cycle(alphaL, alphaR);
+			printf("!" PATTERN "\r\n", alphaL, alphaR);
+		}
+	}
+	HAL_UART_Receive_IT(huart, buf, 1);
+}
 
 /* USER CODE END 0 */
 
@@ -103,10 +176,21 @@ int main(void)
   MX_USART1_UART_Init();
   /* USER CODE BEGIN 2 */
 
+
+  HAL_TIM_PWM_Start(&htim1, TIM_CHANNEL_2);
+  HAL_TIM_PWM_Start(&htim1, TIM_CHANNEL_4);
+  HAL_TIMEx_PWMN_Start(&htim1, TIM_CHANNEL_1);
+  HAL_TIMEx_PWMN_Start(&htim1, TIM_CHANNEL_3);
+
+  printf("Started\r\n");
+  printf("!" PATTERN "\r\n", alphaL, alphaR);
   /* USER CODE END 2 */
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
+  HAL_UART_Receive_IT(&huart1, Rx_data1, 1);
+  HAL_UART_Receive_IT(&huart2, Rx_data2, 1);
+  HAL_PWR_EnableSleepOnExit();
   while (1)
   {
     /* USER CODE END WHILE */
