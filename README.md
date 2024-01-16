@@ -37,6 +37,8 @@ The both uart are IRQ managed in parallel, they work exactly the same way.
 
 ![STM32 pinout](doc/pinout.png)
 
+![STM32 signal](doc/signal_names.png)
+
 ------
 
 ## TODO
