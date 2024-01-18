@@ -22,6 +22,7 @@ The both uart are IRQ managed in parallel, they work exactly the same way.
 **Black Button**: reset set CPU and set duty cycles to 50% + uart answer: `!0500,0500\r\n`
 
 ## Output:
+FIXME: this table is not up-to-date.
  Name | pin 
  --- | :---:
  UART1 RX| PA10
@@ -39,8 +40,15 @@ The both uart are IRQ managed in parallel, they work exactly the same way.
 
 ![STM32 signal](doc/signal_names.png)
 
-------
 
+## Encoder
+- reducer: 1:34
+- encoder: 16 impulsions per motor turn
+- timer: 544 tick per wheel turn
+
+
+
+---
 ## TODO
 * add enable signal to stop motors
 * manage rotary encoder and return speed?
