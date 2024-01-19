@@ -35,7 +35,7 @@
 /* USER CODE BEGIN PD */
 #define RX_LENGTH (10-1)
 #define PATTERN "%04lu,%04lu"
-#define ODOM "%+"PRId16",%+"PRId32"%"PRId32
+#define ODOM "%+"PRId16",%+"PRId64
 #define ZERO STEPS/2
 #define DELTA_STEP 10
 /* USER CODE END PD */
@@ -120,11 +120,12 @@ void update_duty_cycle(int left, int right){
 	set_timers(right, TIM_CHANNEL_3, TIM_CHANNEL_4);
 }
 
-void transmit_state(){
-	// FIXME: Workaround for lld in c (must be switch to cpp)
-	printf("!" PATTERN " Odom L: " ODOM " Odom R:" ODOM "\r\n", alphaL, alphaR,
-			odom_left.velocity,(int32_t)(odom_left.position>>32), (int32_t)(odom_left.position & 0x00000000FFFFFFFFL),
-			odom_right.velocity,(int32_t)(odom_right.position>>32), (int32_t)(odom_right.position & 0x00000000FFFFFFFFL));
+void transmit_state() {
+	// need to switch gcc to standard C instead of nano c in properties
+	// another solution is to write a dedicated print function for int64.
+	printf("!" PATTERN " L:" ODOM " R:" ODOM "\r\n", alphaL, alphaR,
+			odom_left.velocity, odom_left.position,
+			odom_right.velocity, odom_right.position);
 }
 
 void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin){
