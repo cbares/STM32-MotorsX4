@@ -116,13 +116,13 @@ void set_timers(uint16_t val, uint32_t tim1, uint32_t tim2){
 }
 
 void update_duty_cycle(int left, int right){
-	set_timers(left, TIM_CHANNEL_1, TIM_CHANNEL_2);
-	set_timers(right, TIM_CHANNEL_3, TIM_CHANNEL_4);
+	set_timers(left, TIM_CHANNEL_3, TIM_CHANNEL_4);
+	set_timers(right, TIM_CHANNEL_1, TIM_CHANNEL_2);
 }
 
 void transmit_state() {
-	// need to switch gcc to standard C instead of nano c in properties
-	// another solution is to write a dedicated print function for int64.
+	/* need to switch gcc to standard C instead of nano c in properties */
+	/* another solution is to write a dedicated print function for int64. */
 	printf("!" PATTERN " L:" ODOM " R:" ODOM "\r\n", alphaL, alphaR,
 			odom_left.velocity, odom_left.position,
 			odom_right.velocity, odom_right.position);
@@ -171,21 +171,21 @@ void update_encoder(odom_instance *odom, TIM_HandleTypeDef *htim){
 		odom->position = 0;
 		first_time = false;
 	} else {
-		if (temp_counter == odom->last_counter_value) // stopped
+		if (temp_counter == odom->last_counter_value) /* stopped */
 		{
 			odom->velocity = 0;
 		}
-		else if (temp_counter > odom->last_counter_value) // forward
+		else if (temp_counter > odom->last_counter_value) /* forward */
 		{
-			 if (__HAL_TIM_IS_TIM_COUNTING_DOWN(htim)){ // backward & overflow
+			 if (__HAL_TIM_IS_TIM_COUNTING_DOWN(htim)){ /* backward & overflow */
 				 odom->velocity = - odom->last_counter_value - (__HAL_TIM_GET_AUTORELOAD(htim) - temp_counter);
 			 } else {
 				 odom->velocity = temp_counter - odom->last_counter_value;
 			 }
-		} else { // backward
+		} else { /* backward */
 			 if (__HAL_TIM_IS_TIM_COUNTING_DOWN(htim)){
 				 odom->velocity = temp_counter - odom->last_counter_value;
-			 } else { // forward & overflow
+			 } else { /* forward & overflow */
 				 odom->velocity = temp_counter + (__HAL_TIM_GET_AUTORELOAD(htim) - odom->last_counter_value);
 			 }
 		}
@@ -199,8 +199,8 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim){
 	if(htim != &htim6){
 		return;
 	}
-	update_encoder(&odom_left, &htim2);
-	update_encoder(&odom_right, &htim5);
+	update_encoder(&odom_left, &htim5);
+	update_encoder(&odom_right, &htim2);
 }
 
 /* USER CODE END 0 */
